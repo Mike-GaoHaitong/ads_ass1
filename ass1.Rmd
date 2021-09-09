@@ -1,0 +1,492 @@
+---
+title: "Assingment 1"
+author:"Haitong Gao"
+date:"08/09/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+library("R.matlab")
+library("reshape2") 
+library("pracma") 
+library("plot.matrix")
+library("MASS")
+library("Rcpp")
+library("corrplot")
+```
+
+
+```{r}
+TC1 <- rep(c(rep(1,15),rep(-1,15)),8)
+TC2 <- c(c(rep(-1,20)), rep(c(rep(1,20),rep(-1,25)),5)[1:220])
+TC3 <- rep(c(rep(1,25), rep(-1,35)),4)
+TC4 <- rep(c(rep(1,15), rep(-1,25)),6)
+TC5 <- rep(c(rep(1,20), rep(-1,20)),6)
+TC6 <- rep(c(rep(1,25), rep(-1,15)),6)
+
+```
+
+
+```{r}
+
+TC <- matrix(c(TC1,TC2,TC3,TC4,TC5,TC6),ncol=6)
+
+
+for (i in 1:6)
+{
+  TC[,i]<-(TC[,i]-mean(TC[,i]))/sd(TC[,i]);
+}
+
+```
+```{r}
+par(mfrow = c(3,2))
+plot(TC[,1], type = 'l')
+plot(TC[,2], type = 'l')
+plot(TC[,3], type = 'l')
+plot(TC[,4], type = 'l')
+plot(TC[,5], type = 'l')
+plot(TC[,6], type = 'l')
+```
+```{r}
+# normalization
+TC1_n = rep(c(rep(1,15),rep(-1,15)),8)
+TC1_n = sqrt(TC1_n / sum(TC1_n^2))
+TC2_n = c(c(rep(-1,20)), rep(c(rep(1,20),rep(-1,25)),5)[1:220])
+TC2_n = sqrt(TC2_n / sum(TC2_n^2))
+par(mfrow=c(1,2))
+plot(TC_1_n,typ="l")
+plot(TC_2_n,typ="l")
+```
+```{r}
+# Q1.2
+cor(TC)
+plot(cor(TC))
+#4,5 and 4,6 and 5,6 have high correlation
+```
+```{r}
+TC
+```
+```{r}
+#Q1.3
+tmpSM <- array(0, c(6,21,21))
+tmpSM[1, 2:6, 2:6] = 1
+tmpSM[2, 2:6, 15:19] = 1
+tmpSM[3, 8:13, 2:6] = 1
+tmpSM[4, 8:13, 15:19] = 1
+tmpSM[5, 15:19, 2:6] = 1
+tmpSM[6, 15:19, 15:19] = 1
+
+par(mfrow = c(2,3))
+
+plot(tmpSM[1,,])
+plot(tmpSM[2,,])
+plot(tmpSM[3,,])
+plot(tmpSM[4,,])
+plot(tmpSM[5,,])
+plot(tmpSM[6,,])
+```
+```{r}
+SM <- matrix(c(c(tmpSM[1,,]), c(tmpSM[2,,]), c(tmpSM[3,,]), c(tmpSM[4,,]), c(tmpSM[5,,]), c(tmpSM[6,,])), 6,441,byrow = T)
+plot(cor(t(SM)), border = NA)
+
+```
+```{r}
+cor_SMs = 0
+num = 0
+for(i in 1:6){
+  for(j in 1:6){
+    cor_SMs[num] <- cor(SM[i,], SM[j,])
+    num <- num + 1
+  }
+}
+plot(cor_SMs)
+```
+
+```{r}
+#Q1.4
+gammat <- matrix(rnorm(240*6, sd = sqrt(0.25)),240,6)
+gammas <- matrix(rnorm(6*441, sd = sqrt(0.015)),6,441)
+```
+```{r}
+plot(cor(gammat))
+```
+```{r}
+plot(cor(t(gammas)))
+```
+```{r}
+hist(c(gammat), prob = TRUE)
+x <- c(gammat)
+curve(dnorm(x, mean = 0, sd = sqrt(1.96 * 0.25)), col = "blue",add = TRUE)
+```
+```{r}
+hist(c(gammas), prob = TRUE)
+x <- c(gammas)
+curve(dnorm(x, mean = 0, sd = sqrt(1.96 * 0.015)), col = "blue",add = TRUE)
+```
+```{r}
+cor_ts = cor(gammat %*% gammas)
+plot(cor_ts, border = NA)
+```
+```{r}
+#Q1.5
+X = (TC + gammat) %*% (SM + gammas)
+X
+```
+```{r}
+dim(TC)
+dim(gammas)
+dim(gammat)
+dim(SM)
+```
+```{r}
+random100 <- data.frame(n = 1:240, X[,sample.int(441,100)])
+random100plt <- melt(random100, value.name = 'value', id.vars = 'n')
+ggplot(random100plt, aes(x = n, y = value, colour = variable)) + geom_line()
+```
+
+```{r} 
+var_441 = 0
+for(i in 1:441){
+  var_441[i] = var(X[,i])
+}
+
+plot(var_441)
+
+
+```
+```{r}
+X <- scale(X)
+X
+```
+
+```{r}
+#Q2
+D <- TC
+A_LSR <- solve(t(D) %*% D) %*% t(D) %*% X
+D_LSR <- X %*% t(A_LSR)
+```
+```{r}
+par(mfrow = c(1,2))
+RSM1 <- A_LSR[1,]
+RTC1 <- D_LSR[,1]
+dim(RSM1) <- c(21,21)
+plot(RSM1)
+plot(RTC1, type = 'l')
+
+RSM2 <- A_LSR[2,]
+RTC2 <- D_LSR[,2]
+dim(RSM2) <- c(21,21)
+plot(RSM2)
+plot(RTC2, type = 'l')
+
+RSM3 <- A_LSR[3,]
+RTC3 <- D_LSR[,3]
+dim(RSM3) <- c(21,21)
+plot(RSM3)
+plot(RTC3, type = 'l')
+
+RSM4 <- A_LSR[4,]
+RTC4 <- D_LSR[,4]
+dim(RSM4) <- c(21,21)
+plot(RSM4)
+plot(RTC4, type = 'l')
+
+RSM5 <- A_LSR[5,]
+RTC5 <- D_LSR[,5]
+dim(RSM5) <- c(21,21)
+plot(RSM5)
+plot(RTC5, type = 'l')
+
+RSM6 <- A_LSR[6,]
+RTC6 <- D_LSR[,6]
+dim(RSM6) <- c(21,21)
+plot(RSM6)
+plot(RTC6, type = 'l')
+
+
+```
+```{r}
+plot(D_LSR[,3],X[,30])
+plot(D_LSR[,4],X[,30])
+```
+```{r}
+#Q2.2
+lamda <- 0.75
+I = matrix(0,6,6)
+diag(I) <- 1
+lamda_hat <- lamda * 441
+ARR <- solve(t(D) %*% D + lamda_hat * I) %*% t(D) %*% X
+DRR <- X %*% t(ARR)
+
+```
+```{r}
+C_TLSR <- 0
+for (i in 1:6){
+  C_TLSR[i] <- cor(TC[,i], D_LSR[,i])
+}
+C_TLSR
+```
+```{r}
+C_TRR <- 0
+for(i in 1:6){
+  C_TRR[i] <- cor(TC[,i],DRR[,i])
+}
+C_TRR
+```
+```{r}
+sum(C_TLSR)
+sum(C_TRR)
+```
+```{r}
+lamda1 <- 1000
+new_lamda_hat <- lamda1 * 441
+ARR_1 <- solve(t(D) %*% D + new_lamda_hat * I) %*% t(D) %*% X
+#par(mfrow = c(2,1))
+plot(ARR_1[1,])
+plot(A_LSR[1,])
+```
+```{r}
+#Q2.3
+rho_list <- seq(from = 0, to = 1, by = 0.05)
+sd_t <- runif(10,0,1)
+sd_s <- runif(10,0,1)
+rho_list
+```
+```{r}
+MSE <- 0
+for(c in 1:10){
+  gammat_new <- matrix(rnorm(240*6, sd = sd_t[c]), 240,6)
+  gammas_new <- matrix(rnorm(6*441, sd = sd_s[c]), 6,441)
+  X_new <- (TC + gammat_new) %*% (SM + gammas_new)
+  X_new <- scale(X_new)
+  for(a in 1:21){
+    rho <- rho_list[a]
+    step <- 1/(norm(TC%*%t(TC))*1.1) 
+    thr <- rho*240*step
+    Ao <- matrix(0,6,1) 
+    A <- matrix (0,6,1)
+    Alr <- matrix(0,6,441)
+    
+    for (k in 1:441){
+      A <- Ao+step*(t(TC)%*%(X_new[,k]-(TC%*%Ao)))
+      A <- (1/(1+thr))*(sign(A)*pmax(replicate(6 ,0), abs(A)-thr))
+      for ( i in 1:10){
+        Ao <- A
+        A <- Ao+step*(t(TC)%*%(X_new[,k]-(TC%*%Ao)))
+        A <- (1/(1+thr))*(sign(A)*pmax(replicate(6,0), abs(A)-thr))
+      }
+      Alr[,k] <- A 
+    }
+    Dlr <- X_new %*% t(Alr)
+    MSE[a] <- norm((X_new - Dlr %*% Alr), type = "F") ^2 /(240 * 441)
+  }
+}
+
+
+```
+```{r}
+plot(rho_list, MSE, main="MSE vs rho", ylab="MSE", type = 'l', col = 'blue')
+```
+```{r}
+MSE
+#at the 12nd rho, mse started increasing
+```
+```{r}
+#Q2.4
+rho <- 0.55
+step <- 1/(norm(TC%*%t(TC))*1.1) 
+thr <- rho*240*step
+Ao <- matrix(0,6,1) 
+A <- matrix (0,6,1)
+Alr <- matrix(0,6,441)
+
+for (k in 1:441){
+  A <- Ao+step*(t(TC)%*%(X[,k]-(TC%*%Ao)))
+  A <- (1/(1+thr))*(sign(A)*pmax(replicate(6 ,0), abs(A)-thr))
+  for ( i in 1:10){
+    Ao <- A
+    A <- Ao+step*(t(TC)%*%(X[,k]-(TC%*%Ao)))
+    A <- (1/(1+thr))*(sign(A)*pmax(replicate(6,0), abs(A)-thr))
+  }
+  Alr[,k] <- A 
+}
+Dlr <- X %*% t(Alr)
+
+
+CTRR <- 0
+CSRR <- 0
+CTLR <- 0 
+CSLR <- 0
+
+for(i in 1:6){
+  CTRR[i] <- cor(TC[,i], DRR[,i])
+  CSRR[i] <- cor(SM[i,], ARR[i,])
+  CTLR[i] <- cor(TC[,i], Dlr[,i])
+  CSLR[i] <- cor(SM[i,], Alr[i,])
+}
+ 
+print(paste("sum of CTLR =", sum(CTLR)))
+print(paste("sum of CTRR =", sum(CTRR)))
+print(paste("sum of CSLR =", sum(CSLR)))
+print(paste("sum of CSRR =", sum(CSRR)))
+```
+
+
+```{r}
+aRR1 <- ARR[1,]
+dim(aRR1) <- c(21,21)
+aRR2 <- ARR[2,]
+dim(aRR2) <- c(21,21)
+aRR3 <- ARR[3,]
+dim(aRR3) <- c(21,21)
+aRR4 <- ARR[4,]
+dim(aRR4) <- c(21,21)
+aRR5 <- ARR[5,]
+dim(aRR5) <- c(21,21)
+aRR6 <- ARR[6,]
+dim(aRR6) <- c(21,21)
+
+alr1 <- Alr[1,]
+dim(alr1) <- c(21,21)
+alr2 <- Alr[2,]
+dim(alr2) <- c(21,21)
+alr3 <- Alr[3,]
+dim(alr3) <- c(21,21)
+alr4 <- Alr[4,]
+dim(alr4) <- c(21,21)
+alr5 <- Alr[5,]
+dim(alr5) <- c(21,21)
+alr6 <- Alr[6,]
+dim(alr6) <- c(21,21)
+
+par(mfrow = c(3,4))
+plot(aRR1)
+plot(DRR[,1])
+plot(alr1)
+plot(Dlr[,1])
+
+plot(aRR2)
+plot(DRR[,2])
+plot(alr2)
+plot(Dlr[,2])
+
+plot(aRR3)
+plot(DRR[,3])
+plot(alr3)
+plot(Dlr[,3])
+
+par(mfrow = c(3,4))
+plot(aRR4)
+plot(DRR[,4])
+plot(alr4)
+plot(Dlr[,4])
+
+plot(aRR5)
+plot(DRR[,5])
+plot(alr5)
+plot(Dlr[,5])
+
+plot(aRR6)
+plot(DRR[,6])
+plot(alr6)
+plot(Dlr[,6])
+```
+```{r}
+#Q2.5
+D_2 <- scale(D)
+PCS <- svd(D_2, 6)
+Z <- PCS$u
+evs <- PCS$v
+evs
+plot(evs)
+```
+```{r}
+par(mfrow = c(3,2))
+for(i in 1:3){
+  plot(Z[,i],type = 'l')
+  plot(TC[,i], type = 'l')
+}
+
+par(mfrow = c(3,2))
+for(i in 4:6){
+  plot(Z[,i],type = 'l')
+  plot(TC[,i], type = 'l')
+}
+```
+```{r}
+rho <- 0.001
+step <- 1/(norm(TC%*%t(TC))*1.1) 
+thr <- rho*240*step
+Ao <- matrix(0,6,1) 
+A <- matrix (0,6,1)
+APCR <- matrix(0,6,441)
+
+for (k in 1:441){
+  A <- Ao+step*(t(TC)%*%(X[,k]-(TC%*%Ao)))
+  A <- (1/(1+thr))*(sign(A)*pmax(replicate(6 ,0), abs(A)-thr))
+  for ( i in 1:10){
+    Ao <- A
+    A <- Ao+step*(t(TC)%*%(X[,k]-(TC%*%Ao)))
+    A <- (1/(1+thr))*(sign(A)*pmax(replicate(6,0), abs(A)-thr))
+  }
+  APCR[,k] <- A 
+}
+DPCR <- X %*% t(Alr)
+```
+```{r}
+aPCR1 <- APCR[1,]
+dim(aPCR1) <- c(21,21)
+aPCR2 <- APCR[2,]
+dim(aPCR2) <- c(21,21)
+aPCR3 <- APCR[3,]
+dim(aPCR3) <- c(21,21)
+aPCR4 <- APCR[4,]
+dim(aPCR4) <- c(21,21)
+aPCR5 <- APCR[5,]
+dim(aPCR5) <- c(21,21)
+aPCR6 <- APCR[6,]
+dim(aPCR6) <- c(21,21)
+
+par(mfrow = c(3,4))
+plot(aPCR1)
+plot(alr1)
+plot(DPCR[,1])
+plot(DRR[,1])
+
+plot(aPCR2)
+plot(alr2)
+plot(DPCR[,2])
+plot(DRR[,2])
+
+plot(aPCR3)
+plot(alr3)
+plot(DPCR[,3])
+plot(DRR[,3])
+
+par(mfrow = c(3,4))
+plot(aPCR4)
+plot(alr4)
+plot(DPCR[,4])
+plot(DRR[,4])
+
+plot(aPCR5)
+plot(alr5)
+plot(DPCR[,5])
+plot(DRR[,5])
+
+plot(aPCR6)
+plot(alr6)
+plot(DPCR[,6])
+plot(DRR[,6])
+
+```
+
+```
+
+
+
+
+
+
